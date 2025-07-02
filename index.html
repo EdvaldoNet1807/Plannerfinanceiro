@@ -1,545 +1,508 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Financeiro na Nuvem com IA</title>
+    <title>Painel Financeiro PRO com Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #000000;
+            @apply bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200;
         }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 280px;
-        }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 320px;
-            }
-        }
-        .kpi-card {
-            background-color: white;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            text-align: center;
+        .kpi-card, .card {
+            @apply bg-white dark:bg-slate-800 rounded-lg shadow-md;
         }
         .kpi-value {
-            font-size: 2.5rem;
-            font-weight: 900;
-            line-height: 1;
-            color: #1e293b;
+            font-size: 2.2rem;
+            @apply font-black leading-none text-slate-800 dark:text-white;
         }
         .kpi-label {
-            font-size: 0.875rem;
-            color: #64748b;
-            margin-top: 0.5rem;
+            @apply text-sm text-slate-500 dark:text-slate-400 mt-2;
         }
         .action-btn {
-            background: linear-gradient(45deg, #4ECDC4, #45B7D1);
-            transition: all 0.3s ease;
+            @apply bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-200;
         }
         .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            @apply scale-105;
         }
         .action-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            @apply opacity-50 cursor-not-allowed scale-100;
         }
         .loader {
-            width: 48px;
-            height: 48px;
-            border: 5px solid #475569;
-            border-bottom-color: #4ECDC4;
-            border-radius: 50%;
-            display: inline-block;
-            box-sizing: border-box;
-            animation: rotation 1s linear infinite;
+            width: 48px; height: 48px; border: 5px solid; @apply border-slate-300 dark:border-slate-600;
+            border-bottom-color: #4ECDC4; border-radius: 50%; display: inline-block;
+            box-sizing: border-box; animation: rotation 1s linear infinite;
         }
         @keyframes rotation {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        #loadingOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease;
+        #loadingOverlay, #authOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            @apply bg-slate-100 dark:bg-slate-900 bg-opacity-90 backdrop-blur-sm;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.3s ease;
+        }
+        .auth-container {
+            @apply w-full max-w-sm p-8 space-y-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl;
+        }
+        .form-input {
+            @apply mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-700 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
         }
     </style>
 </head>
-<body class="text-slate-800">
+<body>
 
+    <!-- Telas de Loading e Autenticação -->
     <div id="loadingOverlay">
         <div class="loader"></div>
-        <p class="mt-4 text-slate-600 font-semibold">Conectando e carregando seus dados...</p>
+        <p class="mt-4 font-semibold text-slate-600 dark:text-slate-300">Conectando...</p>
     </div>
 
-    <div id="appContent" class="container mx-auto p-4 md:p-8" style="display: none;">
+    <div id="authOverlay" style="display: none;">
+        <div class="auth-container">
+            <h2 class="text-2xl font-bold text-center text-slate-900 dark:text-white">Acesse seu Painel</h2>
+            <!-- Abas de Login -->
+            <div class="flex border-b border-slate-200 dark:border-slate-700">
+                <button id="emailTabBtn" class="flex-1 py-2 font-semibold border-b-2 border-blue-500 text-blue-500">Email</button>
+                <button id="phoneTabBtn" class="flex-1 py-2 font-semibold text-slate-500 dark:text-slate-400">Telefone</button>
+            </div>
+            
+            <!-- Formulário de Email -->
+            <div id="emailAuth" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-600 dark:text-slate-300">Email</label>
+                    <input type="email" id="email" class="form-input">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-600 dark:text-slate-300">Senha</label>
+                    <input type="password" id="password" class="form-input">
+                </div>
+                <div class="flex gap-4">
+                    <button id="loginBtn" class="w-full action-btn">Entrar</button>
+                    <button id="registerBtn" class="w-full action-btn bg-gradient-to-r from-slate-500 to-slate-600">Registrar</button>
+                </div>
+            </div>
 
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900">Meu Painel de Controle Financeiro</h1>
-            <p class="mt-2 text-lg text-slate-600">Seus dados salvos na nuvem, acessíveis de qualquer lugar.</p>
-            <div id="userInfo" class="mt-4 text-sm text-slate-500 bg-slate-100 p-2 rounded-md inline-block"></div>
+            <!-- Formulário de Telefone -->
+            <div id="phoneAuth" class="space-y-4" style="display: none;">
+                 <div>
+                    <label for="phoneNumber" class="block text-sm font-medium text-slate-600 dark:text-slate-300">Nº de Telefone (ex: +55119...)</label>
+                    <input type="tel" id="phoneNumber" placeholder="+5511987654321" class="form-input">
+                </div>
+                 <div id="recaptcha-container" class="flex justify-center"></div>
+                <button id="sendCodeBtn" class="w-full action-btn">Enviar Código</button>
+                <div id="verifyCodeSection" style="display: none;">
+                    <label for="verificationCode" class="block text-sm font-medium text-slate-600 dark:text-slate-300">Código de Verificação</label>
+                    <input type="text" id="verificationCode" class="form-input">
+                    <button id="verifyCodeBtn" class="w-full action-btn mt-4">Verificar e Entrar</button>
+                </div>
+            </div>
+            <p id="authError" class="text-red-500 text-center text-sm h-4"></p>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal da Aplicação -->
+    <div id="appContent" class="container mx-auto p-4 md:p-8" style="display: none;">
+        <header class="relative text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Meu Painel de Controle Financeiro</h1>
+            <p class="mt-2 text-lg text-slate-600 dark:text-slate-400">Seus dados salvos na nuvem, acessíveis de qualquer lugar.</p>
+            <div class="absolute top-0 right-0 flex items-center gap-4">
+                <button id="themeToggleBtn" class="p-2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">🌙</button>
+                <button id="logoutBtn" class="text-sm font-semibold text-red-500 hover:text-red-700">Sair</button>
+            </div>
         </header>
 
         <section id="overview" class="mb-12">
-            <h2 class="text-2xl font-bold text-center mb-6 text-slate-700">Visão Geral Rápida</h2>
+            <h2 class="text-2xl font-bold text-center mb-6">Visão Geral Rápida</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="kpi-card">
-                    <div id="kpiSalario" class="kpi-value" style="color: #4ECDC4;">R$ 0,00</div>
-                    <div class="kpi-label">Salário Líquido Mensal</div>
-                </div>
-                <div class="kpi-card">
-                    <div id="kpiGastos" class="kpi-value" style="color: #f59e0b;">R$ 0,00</div>
-                    <div class="kpi-label">Gastos Totais Mensais</div>
-                </div>
-                <div class="kpi-card">
-                    <div id="kpiDividas" class="kpi-value" style="color: #FF6B6B;">R$ 0,00</div>
-                    <div class="kpi-label">Total de Dívidas Mensais</div>
-                </div>
-                <div class="kpi-card">
-                    <div id="kpiMetas" class="kpi-value" style="color: #45B7D1;">R$ 0,00</div>
-                    <div class="kpi-label">Valor Total das Metas</div>
-                </div>
+                <div class="kpi-card p-4"><div id="kpiSalario" class="kpi-value">R$ 0,00</div><div class="kpi-label">Renda Total Mensal</div></div>
+                <div class="kpi-card p-4"><div id="kpiGastos" class="kpi-value text-amber-500">R$ 0,00</div><div class="kpi-label">Gastos Totais Mensais</div></div>
+                <div class="kpi-card p-4"><div id="kpiSobra" class="kpi-value text-green-500">R$ 0,00</div><div class="kpi-label">Sobra / Poupança</div></div>
+                <div class="kpi-card p-4"><div id="kpiMetas" class="kpi-value text-blue-500">R$ 0,00</div><div class="kpi-label">Valor Total das Metas</div></div>
             </div>
         </section>
 
-        <section id="edit-data" class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 class="text-xl font-bold mb-4 text-center">✏️ Editar Meus Dados</h3>
-            <form id="financialForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
-                <div class="space-y-4">
-                    <h4 class="font-bold text-lg text-slate-700 border-b pb-2">Renda e Despesas</h4>
-                    <div>
-                        <label for="salario" class="block text-sm font-medium text-slate-600">Salário Líquido</label>
-                        <input type="number" id="salario" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                     <div>
-                        <label for="dizimo" class="block text-sm font-medium text-slate-600">Dízimo</label>
-                        <input type="number" id="dizimo" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                    <div>
-                        <label for="internet" class="block text-sm font-medium text-slate-600">Internet</label>
-                        <input type="number" id="internet" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                     <div>
-                        <label for="faculdade" class="block text-sm font-medium text-slate-600">Faculdade</label>
-                        <input type="number" id="faculdade" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                    <div>
-                        <label for="academia" class="block text-sm font-medium text-slate-600">Academia</label>
-                        <input type="number" id="academia" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <h4 class="font-bold text-lg text-slate-700 border-b pb-2">Metas e Dívidas</h4>
-                    <div id="debtList" class="space-y-3"></div>
-                    <button type="button" id="addDebtBtn" class="w-full text-sm text-indigo-600 hover:text-indigo-800 font-semibold py-2 border-2 border-dashed border-slate-300 rounded-md hover:bg-slate-50 transition-colors">+ Adicionar Dívida/Cartão</button>
-                    <hr class="my-4">
-                    <div>
-                        <label for="metaCasa" class="block text-sm font-medium text-slate-600">Meta Total (Casa)</label>
-                        <input type="number" id="metaCasa" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                     <div>
-                        <label for="atualCasa" class="block text-sm font-medium text-slate-600">Valor Atual (Casa)</label>
-                        <input type="number" id="atualCasa" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                    <div>
-                        <label for="metaPc" class="block text-sm font-medium text-slate-600">Meta Total (PC)</label>
-                        <input type="number" id="metaPc" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                    <div>
-                        <label for="atualPc" class="block text-sm font-medium text-slate-600">Valor Atual (PC)</label>
-                        <input type="number" id="atualPc" step="0.01" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                </div>
-                 <div class="space-y-4">
-                     <h4 class="font-bold text-lg text-slate-700 border-b pb-2">Renda Extra (Rifa)</h4>
-                     <div>
-                        <label for="metaRifa" class="block text-sm font-medium text-slate-600">Meta de Números</label>
-                        <input type="number" id="metaRifa" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                     <div>
-                        <label for="vendidosRifa" class="block text-sm font-medium text-slate-600">Números Vendidos</label>
-                        <input type="number" id="vendidosRifa" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                    </div>
-                 </div>
-            </form>
-            <div class="text-center mt-6">
-                <button type="button" id="saveChangesBtn" class="action-btn text-white font-bold py-2 px-6 rounded-lg shadow-md">Salvar Alterações na Nuvem</button>
-                <p id="saveMessage" class="text-green-600 mt-2 h-6"></p>
+        <section id="edit-data" class="card p-6 mb-8">
+            <h3 class="text-xl font-bold mb-6 text-center">✏️ Editar Meus Dados</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Rendas -->
+                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Rendas</h4><div id="incomesList" class="space-y-3"></div><button type="button" data-type="incomes" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Renda</button></div>
+                <!-- Despesas -->
+                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Despesas Fixas</h4><div id="expensesList" class="space-y-3"></div><button type="button" data-type="expenses" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Despesa</button></div>
+                <!-- Metas -->
+                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Cofres (Metas)</h4><div id="goalsList" class="space-y-3"></div><button type="button" data-type="goals" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Meta</button></div>
+            </div>
+             <div class="text-center mt-8">
+                <button type="button" id="saveChangesBtn" class="action-btn px-8">Salvar Alterações na Nuvem</button>
+                <p id="saveMessage" class="text-green-500 mt-2 h-6"></p>
             </div>
         </section>
         
-        <section id="gemini-analysis" class="bg-white rounded-lg shadow-md p-6 mb-8 text-center">
+        <section id="gemini-analysis" class="card p-6 mb-8 text-center">
             <h3 class="text-xl font-bold mb-2">✨ Análise e Dicas com IA ✨</h3>
-            <p class="text-slate-600 mb-4">Clique no botão abaixo para que o Gemini analise seus dados e gere conselhos personalizados para você atingir suas metas mais rápido!</p>
-            <button id="generateAnalysisBtn" class="action-btn text-white font-bold py-2 px-4 rounded-lg shadow-md">
-                Gerar Análise Financeira
-            </button>
-            <div id="analysisResult" class="mt-6 text-left p-4 bg-slate-50 rounded-lg min-h-[100px] flex items-center justify-center">
-                 <p class="text-slate-500">Sua análise aparecerá aqui...</p>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">Peça ao Gemini para analisar seus dados e gerar conselhos personalizados!</p>
+            <button id="generateAnalysisBtn" class="action-btn">Gerar Análise Financeira</button>
+            <div id="analysisResult" class="mt-6 text-left p-4 bg-slate-100 dark:bg-slate-700 rounded-lg min-h-[100px] flex items-center justify-center">
+                 <p class="text-slate-500 dark:text-slate-400">Sua análise aparecerá aqui...</p>
             </div>
         </section>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div id="goals" class="bg-white rounded-lg shadow-md p-6">
+        <main id="main-dashboard">
+             <section id="goals-dashboard" class="card p-6 mb-8">
                 <h3 class="text-xl font-bold mb-4 text-center">🎯 Meus Cofres de Sonhos</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <div class="chart-container">
-                            <canvas id="goalHomeChart"></canvas>
-                        </div>
-                        <p class="text-center mt-2 font-semibold">Casa: Geladeira + Cooktop</p>
-                    </div>
-                    <div>
-                        <div class="chart-container">
-                            <canvas id="goalPcChart"></canvas>
-                        </div>
-                         <p class="text-center mt-2 font-semibold">Lazer: Upgrade do PC</p>
-                    </div>
+                <div id="goalsChartContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-center">
+                    <!-- Gráficos das metas serão inseridos aqui -->
                 </div>
-            </div>
-
-            <div id="budget" class="bg-white rounded-lg shadow-md p-6">
+            </section>
+            <section id="budget-dashboard" class="card p-6">
                 <h3 class="text-xl font-bold mb-4 text-center">📊 Orçamento Mensal Simplificado</h3>
-                <div class="chart-container h-80 md:h-96">
+                <div class="chart-container h-80 md:h-96 mx-auto">
                     <canvas id="budgetChart"></canvas>
                 </div>
-            </div>
-
-            <div id="debt-freedom" class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-xl font-bold mb-4 text-center">🚀 O Caminho para a Liberdade Financeira</h3>
-                <div class="text-center"><p class="text-slate-600 mb-4">Veja o salto no seu potencial de poupança mensal após quitar as dívidas em Nov/2025. A liberdade financeira está próxima!</p></div>
-                <div class="chart-container h-64">
-                     <canvas id="savingsPowerChart"></canvas>
-                </div>
-            </div>
-
-            <div id="raffle" class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-xl font-bold mb-4 text-center">🎟️ Operação Casa Nova - Rifa</h3>
-                 <div class="flex flex-col md:flex-row items-center gap-8">
-                    <div class="w-full md:w-1/2">
-                         <p class="text-center text-slate-600 mb-6">Sua iniciativa de renda extra é a chave para acelerar a meta da casa. Acompanhe o progresso das vendas!</p>
-                         <div class="grid grid-cols-2 gap-4 text-center">
-                            <div>
-                                <p id="rifaPotencial" class="text-2xl font-bold" style="color: #FED766;">R$ 0</p>
-                                <p class="text-sm text-slate-500">Lucro Potencial</p>
-                            </div>
-                            <div>
-                                <p id="rifaArrecadado" class="text-2xl font-bold" style="color: #4ECDC4;">R$ 0</p>
-                                <p class="text-sm text-slate-500">Total Arrecadado</p>
-                            </div>
-                         </div>
-                    </div>
-                    <div class="w-full md:w-1/2">
-                         <div class="chart-container">
-                            <canvas id="raffleChart"></canvas>
-                        </div>
-                        <p class="text-center mt-2 font-semibold">Progresso da Venda de Números</p>
-                    </div>
-                 </div>
-            </div>
+            </section>
         </main>
         
-        <footer class="text-center mt-12 py-4 border-t">
-            <p class="text-slate-500">Infográfico financeiro gerado para um futuro próspero.</p>
+        <footer class="text-center mt-12 py-4 border-t border-slate-200 dark:border-slate-700">
+            <p class="text-slate-500 dark:text-slate-400">Painel Financeiro PRO</p>
         </footer>
-
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Suas Chaves Pessoais do Firebase ---
-        // Este bloco conecta o site ao seu projeto "financeiro-7c28e"
+        // --- Configuração do Firebase (Coloque suas chaves aqui) ---
         const firebaseConfig = {
-          apiKey: "AIzaSyDmgBe4wqDaamTRRlolUSBCR1Hp9wYScoU",
-          authDomain: "financeiro-7c28e.firebaseapp.com",
-          projectId: "financeiro-7c28e",
-          storageBucket: "financeiro-7c28e.appspot.com",
-          messagingSenderId: "29137515180",
-          appId: "1:29137515180:web:80ea12781a59b001bfe509"
+            apiKey: "AIzaSyDmgBe4wqDaamTRRlolUSBCR1Hp9wYScoU",
+            authDomain: "financeiro-7c28e.firebaseapp.com",
+            projectId: "financeiro-7c28e",
+            storageBucket: "financeiro-7c28e.appspot.com",
+            messagingSenderId: "29137515180",
+            appId: "1:29137515180:web:80ea12781a59b001bfe509"
         };
 
-        // --- Inicialização do Firebase ---
+        // --- Inicialização ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
         // --- Elementos da UI ---
         const loadingOverlay = document.getElementById('loadingOverlay');
+        const authOverlay = document.getElementById('authOverlay');
         const appContent = document.getElementById('appContent');
-        const userInfoDiv = document.getElementById('userInfo');
-        const saveChangesBtn = document.getElementById('saveChangesBtn');
-        const saveMessage = document.getElementById('saveMessage');
-        const debtListContainer = document.getElementById('debtList');
-        const addDebtBtn = document.getElementById('addDebtBtn');
-        const generateAnalysisBtn = document.getElementById('generateAnalysisBtn');
-        const analysisResultDiv = document.getElementById('analysisResult');
-
-        // --- Variáveis Globais da Aplicação ---
-        let financialData = {};
-        let charts = {};
-        let currentUser = null;
-        let financialDataRef = null;
-        let unsubscribe = null; // Função para desligar o listener do onSnapshot
-
-        const formElements = {
-            salario: document.getElementById('salario'), dizimo: document.getElementById('dizimo'),
-            internet: document.getElementById('internet'), faculdade: document.getElementById('faculdade'),
-            academia: document.getElementById('academia'), metaCasa: document.getElementById('metaCasa'),
-            atualCasa: document.getElementById('atualCasa'), metaPc: document.getElementById('metaPc'),
-            atualPc: document.getElementById('atualPc'), metaRifa: document.getElementById('metaRifa'),
-            vendidosRifa: document.getElementById('vendidosRifa')
-        };
+        const authError = document.getElementById('authError');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
         
-        const kpiElements = {
-            salario: document.getElementById('kpiSalario'), gastos: document.getElementById('kpiGastos'),
-            dividas: document.getElementById('kpiDividas'), metas: document.getElementById('kpiMetas'),
-            rifaPotencial: document.getElementById('rifaPotencial'), rifaArrecadado: document.getElementById('rifaArrecadado')
+        // --- Estado da Aplicação ---
+        let state = {
+            currentUser: null,
+            financialData: {},
+            charts: {},
+            unsubscribe: null,
+            confirmationResult: null,
         };
 
-        // --- Funções Principais ---
-        
-        async function main() {
-            initializeCharts();
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUser = user;
-                    const appId = 'financial-planner-app'; // Um ID fixo para o app
-                    userInfoDiv.innerHTML = `<strong>Seu ID de Usuário:</strong> ${user.uid}`;
-                    financialDataRef = doc(db, `artifacts/${appId}/users/${user.uid}/financialData`, 'data');
-                    
-                    if (unsubscribe) unsubscribe(); // Desliga listener anterior se houver
-                    
-                    unsubscribe = onSnapshot(financialDataRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            populateForm(data);
-                            processAndDisplayData(data);
-                        } else {
-                            console.log("Documento não encontrado! Criando com dados iniciais.");
-                            createInitialDocument();
-                        }
-                        loadingOverlay.style.opacity = '0';
-                        setTimeout(() => { loadingOverlay.style.display = 'none'; appContent.style.display = 'block'; }, 300);
-                    }, (error) => {
-                        console.error("Erro ao ouvir dados:", error);
-                        alert("Não foi possível carregar seus dados. Por favor, recarregue a página.");
-                    });
+        // --- LÓGICA DE AUTENTICAÇÃO ---
+        function setupAuthUI() {
+            // Lógica das abas
+            const emailTabBtn = document.getElementById('emailTabBtn');
+            const phoneTabBtn = document.getElementById('phoneTabBtn');
+            const emailAuthDiv = document.getElementById('emailAuth');
+            const phoneAuthDiv = document.getElementById('phoneAuth');
 
-                } else {
-                    console.log("Nenhum usuário logado. Realizando login anônimo.");
-                    try {
-                        await signInAnonymously(auth);
-                    } catch (error) {
-                        console.error("Erro no login:", error);
-                        loadingOverlay.innerHTML = '<p class="text-red-500">Erro de autenticação. Não foi possível carregar a aplicação.</p>';
-                    }
-                }
+            emailTabBtn.addEventListener('click', () => {
+                emailAuthDiv.style.display = 'block';
+                phoneAuthDiv.style.display = 'none';
+                emailTabBtn.classList.add('border-blue-500', 'text-blue-500');
+                phoneTabBtn.classList.remove('border-blue-500', 'text-blue-500');
             });
-        }
 
-        async function createInitialDocument() {
-            const initialData = {
-                salario: 1503.34, dizimo: 150.33, internet: 156.34, faculdade: 181.75, academia: 89.90,
-                metaCasa: 3600, atualCasa: 500, metaPc: 2400, atualPc: 240,
-                metaRifa: 400, vendidosRifa: 50,
-                debts: [
-                    { name: 'Parcelamento Will Bank', value: 227.99 },
-                    { name: 'Empréstimo Nubank', value: 418.17 }
-                ]
-            };
-            try {
-                await setDoc(financialDataRef, initialData);
-                console.log("Documento inicial criado com sucesso!");
-            } catch (error) {
-                console.error("Erro ao criar documento inicial:", error);
-            }
-        }
-        
-        function populateForm(data) {
-            for (const key in formElements) {
-                if (data.hasOwnProperty(key)) {
-                    formElements[key].value = data[key];
-                }
-            }
-            debtListContainer.innerHTML = '';
-            if (data.debts && Array.isArray(data.debts)) {
-                data.debts.forEach(debt => addDebtEntry(debt.name, debt.value));
-            }
-        }
+            phoneTabBtn.addEventListener('click', () => {
+                emailAuthDiv.style.display = 'none';
+                phoneAuthDiv.style.display = 'block';
+                phoneTabBtn.classList.add('border-blue-500', 'text-blue-500');
+                emailTabBtn.classList.remove('border-blue-500', 'text-blue-500');
+                if (!window.recaptchaVerifier) setupRecaptcha();
+            });
 
-        function processAndDisplayData(data) {
-            financialData = data;
-            financialData.totalFixas = (data.dizimo || 0) + (data.internet || 0) + (data.faculdade || 0) + (data.academia || 0);
-            financialData.totalDividas = data.debts ? data.debts.reduce((acc, debt) => acc + (debt.value || 0), 0) : 0;
-            financialData.totalGastos = financialData.totalFixas + financialData.totalDividas;
-            financialData.sobra = (data.salario || 0) - financialData.totalGastos;
-            financialData.poupancaFutura = (data.salario || 0) - financialData.totalFixas;
-            financialData.totalMetas = (data.metaCasa || 0) + (data.metaPc || 0);
-            financialData.rifaValorNumero = 10;
-            financialData.rifaPotencial = (data.metaRifa || 0) * financialData.rifaValorNumero * 0.875;
-            financialData.rifaArrecadado = (data.vendidosRifa || 0) * financialData.rifaValorNumero;
-            updateUI();
-        }
+            // Listeners de Email/Senha
+            document.getElementById('registerBtn').addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                authError.textContent = '';
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } catch (error) { authError.textContent = "Erro ao registrar: " + error.message; }
+            });
 
-        function updateUI() {
-            kpiElements.salario.textContent = formatCurrency(financialData.salario || 0);
-            kpiElements.gastos.textContent = formatCurrency(financialData.totalGastos || 0);
-            kpiElements.dividas.textContent = formatCurrency(financialData.totalDividas || 0);
-            kpiElements.metas.textContent = formatCurrency(financialData.totalMetas || 0);
-            kpiElements.rifaPotencial.textContent = formatCurrency(financialData.rifaPotencial || 0);
-            kpiElements.rifaArrecadado.textContent = formatCurrency(financialData.rifaArrecadado || 0);
-
-            updateChart(charts.goalHome, [financialData.atualCasa || 0, Math.max(0, (financialData.metaCasa || 0) - (financialData.atualCasa || 0))]);
-            updateChart(charts.goalPc, [financialData.atualPc || 0, Math.max(0, (financialData.metaPc || 0) - (financialData.atualPc || 0))]);
-            updateChart(charts.budget, [financialData.totalFixas || 0, financialData.totalDividas || 0, Math.max(0, financialData.sobra || 0)]);
-            charts.budget.data.labels = [`Despesas Fixas (${formatCurrency(financialData.totalFixas || 0)})`, `Dívidas (${formatCurrency(financialData.totalDividas || 0)})`, `Sobra/Poupança (${formatCurrency(financialData.sobra || 0)})`];
-            updateChart(charts.savingsPower, [financialData.sobra || 0, financialData.poupancaFutura || 0], 0);
-            updateChart(charts.raffle, [financialData.vendidosRifa || 0, Math.max(0, (financialData.metaRifa || 0) - (financialData.vendidosRifa || 0))]);
+            document.getElementById('loginBtn').addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                authError.textContent = '';
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) { authError.textContent = "Erro ao entrar: " + error.message; }
+            });
             
-            charts.budget.update();
-            charts.savingsPower.update();
-        }
-        
-        async function handleSaveChanges() {
-            saveChangesBtn.disabled = true;
-            const dataToSave = {};
-            for (const key in formElements) {
-                dataToSave[key] = parseFloat(formElements[key].value) || 0;
-            }
-            dataToSave.debts = [];
-            document.querySelectorAll('.debt-entry').forEach(entry => {
-                const name = entry.querySelector('.debt-name').value || 'Dívida';
-                const value = parseFloat(entry.querySelector('.debt-value').value) || 0;
-                if (value > 0) dataToSave.debts.push({ name, value });
+            // Listeners de Telefone
+            document.getElementById('sendCodeBtn').addEventListener('click', async () => {
+                const phoneNumber = document.getElementById('phoneNumber').value;
+                authError.textContent = '';
+                try {
+                    state.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+                    document.getElementById('verifyCodeSection').style.display = 'block';
+                    authError.textContent = 'Código de verificação enviado!';
+                    authError.classList.replace('text-red-500', 'text-green-500');
+                } catch (error) { authError.textContent = "Erro ao enviar código: " + error.message; }
             });
 
+            document.getElementById('verifyCodeBtn').addEventListener('click', async () => {
+                const code = document.getElementById('verificationCode').value;
+                authError.textContent = '';
+                try {
+                    await state.confirmationResult.confirm(code);
+                } catch (error) { authError.textContent = "Código inválido: " + error.message; }
+            });
+            
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+        }
+
+        function setupRecaptcha() {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                'size': 'normal',
+                'callback': (response) => { /* reCAPTCHA resolvido */ },
+                'expired-callback': () => { /* reCAPTCHA expirado */ }
+            });
+            window.recaptchaVerifier.render();
+        }
+
+        // --- LÓGICA DE DADOS (FIRESTORE) ---
+        async function setupFirestoreListener(user) {
+            const financialDataRef = doc(db, `financial_planners/${user.uid}/data`, 'main');
+            if (state.unsubscribe) state.unsubscribe();
+
+            state.unsubscribe = onSnapshot(financialDataRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.financialData = data;
+                    renderUI(data);
+                } else {
+                    console.log("Documento não encontrado! Criando com dados iniciais.");
+                    createInitialDocument(financialDataRef);
+                }
+                hideLoading();
+            }, (error) => {
+                console.error("Erro ao carregar dados:", error);
+                alert("Não foi possível carregar seus dados.");
+            });
+        }
+
+        async function createInitialDocument(docRef) {
+            const initialData = {
+                theme: 'light',
+                incomes: [{ id: Date.now(), name: 'Salário', value: 2500 }],
+                expenses: [{ id: Date.now(), name: 'Aluguel', value: 800 }],
+                goals: [{ id: Date.now(), name: 'Viagem para a Praia', target: 3000, current: 200 }],
+            };
+            await setDoc(docRef, initialData);
+        }
+
+        async function saveDataToFirestore() {
+            document.getElementById('saveChangesBtn').disabled = true;
+            const dataToSave = {
+                theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                incomes: [], expenses: [], goals: []
+            };
+
+            document.querySelectorAll('#incomesList .item-entry').forEach(entry => dataToSave.incomes.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, value: parseFloat(entry.querySelector('.item-value').value) || 0 }));
+            document.querySelectorAll('#expensesList .item-entry').forEach(entry => dataToSave.expenses.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, value: parseFloat(entry.querySelector('.item-value').value) || 0 }));
+            document.querySelectorAll('#goalsList .item-entry').forEach(entry => dataToSave.goals.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, target: parseFloat(entry.querySelector('.item-target').value) || 0, current: parseFloat(entry.querySelector('.item-current').value) || 0 }));
+            
+            const financialDataRef = doc(db, `financial_planners/${state.currentUser.uid}/data`, 'main');
             try {
                 await setDoc(financialDataRef, dataToSave);
+                const saveMessage = document.getElementById('saveMessage');
                 saveMessage.textContent = 'Dados salvos na nuvem!';
                 setTimeout(() => { saveMessage.textContent = ''; }, 3000);
             } catch (error) {
-                console.error("Erro ao salvar dados:", error);
-                saveMessage.textContent = 'Erro ao salvar!';
-                saveMessage.classList.replace('text-green-600', 'text-red-600');
+                console.error("Erro ao salvar:", error);
+                alert("Falha ao salvar os dados.");
             } finally {
-                saveChangesBtn.disabled = false;
+                document.getElementById('saveChangesBtn').disabled = false;
             }
         }
 
-        // --- Funções Auxiliares e de UI ---
-        function formatCurrency(value) { return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-        function updateChart(chart, data, datasetIndex = 0) { if (chart) { chart.data.datasets[datasetIndex].data = data; chart.update(); } }
-        function addDebtEntry(name = '', value = '') {
-            const debtId = Date.now() + Math.random();
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'debt-entry flex items-center gap-2 p-2 bg-slate-50 rounded-md';
-            entryDiv.innerHTML = `
-                <div class="flex-grow"><input type="text" value="${name}" placeholder="Nome da Dívida" class="debt-name w-full text-sm p-1 rounded-md border-slate-300"></div>
-                <div class="flex-grow"><input type="number" value="${value}" placeholder="Valor" step="0.01" class="debt-value w-full text-sm p-1 rounded-md border-slate-300"></div>
-                <button type="button" class="remove-debt-btn text-red-500 hover:text-red-700 font-bold p-1 rounded-full">&times;</button>
-            `;
-            debtListContainer.appendChild(entryDiv);
-            entryDiv.querySelector('.remove-debt-btn').addEventListener('click', () => entryDiv.remove());
+        // --- LÓGICA DE RENDERIZAÇÃO E UI ---
+        function renderUI(data) {
+            applyTheme(data.theme || 'light');
+            renderDynamicLists(data);
+            const calculatedData = calculateTotals(data);
+            renderKPIs(calculatedData);
+            renderCharts(calculatedData);
         }
 
-        // --- Inicialização de Gráficos ---
-        function initializeCharts() {
-            const tooltipTitleCallback = (tooltipItems) => {
-                const item = tooltipItems[0];
-                let label = item.chart.data.labels[item.dataIndex];
-                if (Array.isArray(label)) { return label.join(' '); }
-                return label;
-            };
-            const sharedDoughnutOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 12 } } }, tooltip: { callbacks: { title: tooltipTitleCallback } } } };
-            const colors = { coral: '#FF6B6B', turquoise: '#4ECDC4', blue: '#45B7D1', yellow: '#FED766', lightGray: '#E9E9E9' };
-
-            charts.goalHome = new Chart(document.getElementById('goalHomeChart'), { type: 'doughnut', data: { labels: [['Fundo para a Casa', '(Geladeira + Cooktop)'], 'Faltante'], datasets: [{ data: [0, 1], backgroundColor: [colors.turquoise, colors.lightGray], borderWidth: 4 }] }, options: sharedDoughnutOptions });
-            charts.goalPc = new Chart(document.getElementById('goalPcChart'), { type: 'doughnut', data: { labels: [['Upgrade Completo', 'do PC'], 'Faltante'], datasets: [{ data: [0, 1], backgroundColor: [colors.blue, colors.lightGray], borderWidth: 4 }] }, options: sharedDoughnutOptions });
-            charts.budget = new Chart(document.getElementById('budgetChart'), { type: 'doughnut', data: { labels: ['Despesas Fixas', 'Dívidas', 'Sobra/Poupança'], datasets: [{ data: [1, 1, 1], backgroundColor: [colors.coral, colors.yellow, colors.turquoise], borderWidth: 4 }] }, options: sharedDoughnutOptions });
-            charts.savingsPower = new Chart(document.getElementById('savingsPowerChart'), { type: 'bar', data: { labels: ['Potencial de Poupança Atual', 'Potencial Futuro (Dez/25)'], datasets: [{ label: 'Poder de Poupança Mensal (R$)', data: [0, 0], backgroundColor: [colors.yellow, colors.turquoise], borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: tooltipTitleCallback } } } } });
-            charts.raffle = new Chart(document.getElementById('raffleChart'), { type: 'doughnut', data: { labels: ['Números Vendidos', 'Números Restantes'], datasets: [{ data: [0, 1], backgroundColor: [colors.coral, colors.lightGray], borderWidth: 4 }] }, options: {...sharedDoughnutOptions, plugins: {...sharedDoughnutOptions.plugins, legend: {display: false}}} });
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                html.classList.remove('light');
+                themeBtn.textContent = '☀️';
+            } else {
+                html.classList.add('light');
+                html.classList.remove('dark');
+                themeBtn.textContent = '🌙';
+            }
         }
         
-        // --- Lógica da IA Gemini ---
-        generateAnalysisBtn.addEventListener('click', async () => {
-            generateAnalysisBtn.disabled = true;
-            analysisResultDiv.innerHTML = '<div class="loader"></div>';
-
-            let debtsPrompt = financialData.debts && financialData.debts.length > 0
-                ? financialData.debts.map(d => `- Parcela ${d.name}: ${formatCurrency(d.value)}`).join('\n')
-                : "- Nenhuma dívida registrada.";
-
-            const prompt = `
-                Aja como um consultor financeiro amigável e motivador. Com base nos seguintes dados de um usuário no Brasil, forneça uma análise curta e objetiva em formato de lista com 3 a 4 dicas práticas e personalizadas para melhorar a saúde financeira e atingir as metas mais rápido.
-                
-                Dados Financeiros:
-                - Salário Líquido Mensal: ${formatCurrency(financialData.salario)}
-                - Total de Gastos Mensais: ${formatCurrency(financialData.totalGastos)}
-                - Sobra Mensal / Potencial de Poupança Atual: ${formatCurrency(financialData.sobra)}
-                
-                Dívidas Atuais:
-                ${debtsPrompt}
-
-                Metas:
-                - Meta 1 (Casa): Valor total ${formatCurrency(financialData.metaCasa)}, já possui ${formatCurrency(financialData.atualCasa)}.
-                - Meta 2 (PC): Valor total ${formatCurrency(financialData.metaPc)}, já possui ${formatCurrency(financialData.atualPc)}.
-                
-                Renda Extra (Rifa):
-                - Potencial de Lucro: ${formatCurrency(financialData.rifaPotencial)}
-                - Progresso: ${financialData.vendidosRifa} de ${financialData.metaRifa} números vendidos.
-
-                Use uma linguagem positiva e encorajadora. Comece com uma saudação e termine com uma frase de motivação. Formate as dicas como uma lista com marcadores (bullet points), usando <strong>•</strong> para cada ponto. Use <br><br> para separar os pontos da lista.
-            `;
-            
-            try {
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }) });
-                if (!response.ok) { throw new Error(`API error: ${response.status}`); }
-                const result = await response.json();
-                if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                    let text = result.candidates[0].content.parts[0].text;
-                    analysisResultDiv.innerHTML = `<div class="prose prose-sm max-w-none">${text}</div>`;
-                } else { throw new Error("Resposta da IA inválida ou vazia."); }
-            } catch (error) {
-                console.error("Erro ao chamar a API Gemini:", error);
-                analysisResultDiv.innerHTML = `<p class="text-red-500">Desculpe, não foi possível gerar a análise. Tente novamente mais tarde.</p>`;
-            } finally {
-                generateAnalysisBtn.disabled = false;
+        function renderDynamicLists(data) {
+            const lists = { incomes: 'incomesList', expenses: 'expensesList', goals: 'goalsList' };
+            for(const key in lists) {
+                const container = document.getElementById(lists[key]);
+                container.innerHTML = '';
+                if(data[key]) {
+                    data[key].forEach(item => addEntryToDOM(key, item));
+                }
             }
-        });
+        }
+        
+        function calculateTotals(data) {
+            const incomeTotal = data.incomes?.reduce((sum, item) => sum + item.value, 0) || 0;
+            const expenseTotal = data.expenses?.reduce((sum, item) => sum + item.value, 0) || 0;
+            const goalsTotal = data.goals?.reduce((sum, item) => sum + item.target, 0) || 0;
+            const surplus = incomeTotal - expenseTotal;
+            return { incomeTotal, expenseTotal, goalsTotal, surplus, allData: data };
+        }
 
-        // --- Event Listeners ---
-        addDebtBtn.addEventListener('click', () => addDebtEntry());
-        saveChangesBtn.addEventListener('click', handleSaveChanges);
+        function renderKPIs({ incomeTotal, expenseTotal, surplus, goalsTotal }) {
+            document.getElementById('kpiSalario').textContent = formatCurrency(incomeTotal);
+            document.getElementById('kpiGastos').textContent = formatCurrency(expenseTotal);
+            document.getElementById('kpiSobra').textContent = formatCurrency(surplus);
+            document.getElementById('kpiMetas').textContent = formatCurrency(goalsTotal);
+        }
 
-        // --- Ponto de Entrada da Aplicação ---
+        // --- LÓGICA DOS GRÁFICOS ---
+        function initializeCharts() {
+            const budgetCanvas = document.getElementById('budgetChart');
+            if(budgetCanvas) {
+                state.charts.budget = new Chart(budgetCanvas, {
+                    type: 'doughnut',
+                    data: { labels: ['Rendas', 'Despesas', 'Sobra'], datasets: [{ data: [], backgroundColor: ['#4ECDC4', '#FF6B6B', '#45B7D1'] }] },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+        
+        function renderCharts({ incomeTotal, expenseTotal, surplus, allData }) {
+            // Orçamento
+            if(state.charts.budget) {
+                state.charts.budget.data.datasets[0].data = [incomeTotal, expenseTotal, Math.max(0, surplus)];
+                state.charts.budget.update();
+            }
+            // Metas
+            const goalsContainer = document.getElementById('goalsChartContainer');
+            goalsContainer.innerHTML = ''; // Limpa gráficos antigos
+            allData.goals?.forEach(goal => {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'text-center';
+                chartDiv.innerHTML = `<div class="chart-container h-64 mx-auto"><canvas id="goal-chart-${goal.id}"></canvas></div><p class="mt-2 font-semibold">${goal.name}</p>`;
+                goalsContainer.appendChild(chartDiv);
+                
+                new Chart(document.getElementById(`goal-chart-${goal.id}`), {
+                    type: 'doughnut',
+                    data: { labels: ['Alcançado', 'Faltante'], datasets: [{ data: [goal.current, Math.max(0, goal.target - goal.current)], backgroundColor: ['#45B7D1', '#e5e7eb'] }] },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            });
+        }
+
+        // --- MANIPULAÇÃO DINÂMICA DO DOM ---
+        function addEntryToDOM(type, item = {}) {
+            const id = item.id || Date.now();
+            const name = item.name || '';
+            const value = item.value || '';
+            const target = item.target || '';
+            const current = item.current || '';
+
+            const container = document.getElementById(`${type}List`);
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'item-entry flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-md';
+            entryDiv.dataset.id = id;
+
+            let fields = `<div class="flex-grow"><input type="text" value="${name}" placeholder="Nome" class="item-name w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+            if(type === 'goals') {
+                fields += `<div class="flex-grow"><input type="number" value="${current}" placeholder="Atual" class="item-current w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+                fields += `<span class="text-slate-400">/</span>`;
+                fields += `<div class="flex-grow"><input type="number" value="${target}" placeholder="Meta" class="item-target w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+            } else {
+                fields += `<div class="flex-grow"><input type="number" value="${value}" placeholder="Valor" class="item-value w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+            }
+            
+            entryDiv.innerHTML = `${fields}<button type="button" class="removeItemBtn text-red-500 hover:text-red-700 font-bold p-1 rounded-full">&times;</button>`;
+            container.appendChild(entryDiv);
+        }
+        
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            document.getElementById('edit-data').addEventListener('click', (e) => {
+                if (e.target.classList.contains('addItemBtn')) {
+                    addEntryToDOM(e.target.dataset.type);
+                }
+                if (e.target.classList.contains('removeItemBtn')) {
+                    e.target.closest('.item-entry').remove();
+                }
+            });
+            
+            document.getElementById('saveChangesBtn').addEventListener('click', saveDataToFirestore);
+            
+            themeToggleBtn.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                applyTheme(newTheme);
+                // O salvamento do tema ocorre junto com os outros dados
+            });
+        }
+        
+        // --- Funções de UI e Utilidades ---
+        function formatCurrency(value) { return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+        function showAuthUI() { authOverlay.style.display = 'flex'; }
+        function hideAuthUI() { authOverlay.style.display = 'none'; }
+        function hideLoading() { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; appContent.style.display = 'block'; }, 300); }
+
+        // --- PONTO DE ENTRADA ---
+        function main() {
+            initializeCharts();
+            setupAuthUI();
+            setupEventListeners();
+            
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    state.currentUser = user;
+                    hideAuthUI();
+                    setupFirestoreListener(user);
+                } else {
+                    state.currentUser = null;
+                    if(state.unsubscribe) state.unsubscribe();
+                    showAuthUI();
+                    hideLoading();
+                }
+            });
+        }
+
         main();
     </script>
 </body>
 </html>
+<!-- Fim do arquivo index.html -->
