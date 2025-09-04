@@ -20,7 +20,7 @@ const db = getFirestore(app);
 // --- Elementos da UI ---
 const loadingOverlay = document.getElementById('loadingOverlay');
 const authOverlay = document.getElementById('authOverlay');
-const appContent = document.getElementById('appContent');
+const appWrapper = document.getElementById('appWrapper');
 const authError = document.getElementById('authError');
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 
@@ -32,9 +32,35 @@ let state = {
     unsubscribe: null,
 };
 
+// --- LÓGICA DE NAVEGAÇÃO (ROTEAMENTO) ---
+function setupNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const pageContents = document.querySelectorAll('.page-content');
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+
+            // Esconde todas as páginas
+            pageContents.forEach(page => page.style.display = 'none');
+            
+            // Mostra a página alvo
+            document.getElementById(targetId).style.display = 'block';
+
+            // Atualiza a classe 'active'
+            navLinks.forEach(nav => nav.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+
+    // Mostra a primeira página por padrão
+    document.querySelector('#dashboard').style.display = 'block';
+}
+
+
 // --- LÓGICA DE AUTENTICAÇÃO ---
 function setupAuthUI() {
-    // Listeners de Email/Senha
     document.getElementById('registerBtn').addEventListener('click', async () => {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
@@ -53,7 +79,6 @@ function setupAuthUI() {
         } catch (error) { authError.textContent = "Erro ao entrar: " + error.message; }
     });
     
-    // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
 }
 
@@ -68,13 +93,11 @@ async function setupFirestoreListener(user) {
             state.financialData = data;
             renderUI(data);
         } else {
-            console.log("Documento não encontrado! Criando com dados iniciais.");
             createInitialDocument(financialDataRef);
         }
         hideLoading();
     }, (error) => {
         console.error("Erro ao carregar dados:", error);
-        alert("Não foi possível carregar seus dados.");
     });
 }
 
@@ -83,7 +106,7 @@ async function createInitialDocument(docRef) {
         theme: 'light',
         incomes: [{ id: Date.now(), name: 'Salário', value: 2500 }],
         expenses: [{ id: Date.now(), name: 'Aluguel', value: 800 }],
-        goals: [{ id: Date.now(), name: 'Viagem para a Praia', target: 3000, current: 200 }],
+        goals: [{ id: Date.now(), name: 'Viagem', target: 3000, current: 200 }],
     };
     await setDoc(docRef, initialData);
 }
@@ -103,11 +126,10 @@ async function saveDataToFirestore() {
     try {
         await setDoc(financialDataRef, dataToSave);
         const saveMessage = document.getElementById('saveMessage');
-        saveMessage.textContent = 'Dados salvos na nuvem!';
+        saveMessage.textContent = 'Dados salvos!';
         setTimeout(() => { saveMessage.textContent = ''; }, 3000);
     } catch (error) {
         console.error("Erro ao salvar:", error);
-        alert("Falha ao salvar os dados.");
     } finally {
         document.getElementById('saveChangesBtn').disabled = false;
     }
@@ -124,15 +146,12 @@ function renderUI(data) {
 
 function applyTheme(theme) {
     const html = document.documentElement;
-    const themeBtn = document.getElementById('themeToggleBtn');
     if (theme === 'dark') {
         html.classList.add('dark');
-        html.classList.remove('light');
-        themeBtn.textContent = '☀️';
+        themeToggleBtn.textContent = '☀️';
     } else {
-        html.classList.add('light');
         html.classList.remove('dark');
-        themeBtn.textContent = '🌙';
+        themeToggleBtn.textContent = '🌙';
     }
 }
 
@@ -165,7 +184,7 @@ function renderKPIs({ incomeTotal, expenseTotal, surplus, goalsTotal }) {
 // --- LÓGICA DOS GRÁFICOS ---
 function initializeCharts() {
     const budgetCanvas = document.getElementById('budgetChart');
-    if(budgetCanvas) {
+    if(budgetCanvas && !state.charts.budget) {
         state.charts.budget = new Chart(budgetCanvas, {
             type: 'doughnut',
             data: { labels: ['Rendas', 'Despesas', 'Sobra'], datasets: [{ data: [], backgroundColor: ['#4ECDC4', '#FF6B6B', '#45B7D1'] }] },
@@ -175,20 +194,16 @@ function initializeCharts() {
 }
 
 function renderCharts({ incomeTotal, expenseTotal, surplus, allData }) {
-    // Orçamento
     if(state.charts.budget) {
         state.charts.budget.data.datasets[0].data = [incomeTotal, expenseTotal, Math.max(0, surplus)];
         state.charts.budget.update();
     }
-    // Metas
     const goalsContainer = document.getElementById('goalsChartContainer');
-    goalsContainer.innerHTML = ''; // Limpa gráficos antigos
+    goalsContainer.innerHTML = '';
     allData.goals?.forEach(goal => {
         const chartDiv = document.createElement('div');
-        chartDiv.className = 'text-center';
-        chartDiv.innerHTML = `<div class="chart-container h-64 mx-auto"><canvas id="goal-chart-${goal.id}"></canvas></div><p class="mt-2 font-semibold">${goal.name}</p>`;
+        chartDiv.innerHTML = `<div class="h-64"><canvas id="goal-chart-${goal.id}"></canvas></div><p class="mt-2 font-semibold">${goal.name}</p>`;
         goalsContainer.appendChild(chartDiv);
-        
         new Chart(document.getElementById(`goal-chart-${goal.id}`), {
             type: 'doughnut',
             data: { labels: ['Alcançado', 'Faltante'], datasets: [{ data: [goal.current, Math.max(0, goal.target - goal.current)], backgroundColor: ['#45B7D1', '#e5e7eb'] }] },
@@ -210,16 +225,16 @@ function addEntryToDOM(type, item = {}) {
     entryDiv.className = 'item-entry flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-md';
     entryDiv.dataset.id = id;
 
-    let fields = `<div class="flex-grow"><input type="text" value="${name}" placeholder="Nome" class="item-name w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+    let fields = `<div class="flex-grow"><input type="text" value="${name}" placeholder="Nome" class="item-name w-full p-1 form-input"></div>`;
     if(type === 'goals') {
-        fields += `<div class="flex-grow"><input type="number" value="${current}" placeholder="Atual" class="item-current w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
-        fields += `<span class="text-slate-400">/</span>`;
-        fields += `<div class="flex-grow"><input type="number" value="${target}" placeholder="Meta" class="item-target w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+        fields += `<div class="flex-grow"><input type="number" value="${current}" placeholder="Atual" class="item-current w-full p-1 form-input"></div>`;
+        fields += `<span>/</span>`;
+        fields += `<div class="flex-grow"><input type="number" value="${target}" placeholder="Meta" class="item-target w-full p-1 form-input"></div>`;
     } else {
-        fields += `<div class="flex-grow"><input type="number" value="${value}" placeholder="Valor" class="item-value w-full text-sm p-1 rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-600"></div>`;
+        fields += `<div class="flex-grow"><input type="number" value="${value}" placeholder="Valor" class="item-value w-full p-1 form-input"></div>`;
     }
     
-    entryDiv.innerHTML = `${fields}<button type="button" class="removeItemBtn text-red-500 hover:text-red-700 font-bold p-1 rounded-full">&times;</button>`;
+    entryDiv.innerHTML = `${fields}<button class="removeItemBtn text-red-500">&times;</button>`;
     container.appendChild(entryDiv);
 }
 
@@ -239,7 +254,6 @@ function setupEventListeners() {
     themeToggleBtn.addEventListener('click', () => {
         const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
         applyTheme(newTheme);
-        // O salvamento do tema ocorre junto com os outros dados
     });
 }
 
@@ -247,18 +261,17 @@ function setupEventListeners() {
 function formatCurrency(value) { return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 function showAuthUI() { authOverlay.style.display = 'flex'; }
 function hideAuthUI() { authOverlay.style.display = 'none'; }
-function hideLoading(showApp = true) {
+function hideLoading() {
     loadingOverlay.style.opacity = '0';
     setTimeout(() => {
         loadingOverlay.style.display = 'none';
-        if (showApp) {
-            appContent.style.display = 'block';
-        }
+        appWrapper.style.display = 'flex';
     }, 300);
 }
 
 // --- PONTO DE ENTRADA ---
 function main() {
+    setupNavigation();
     initializeCharts();
     setupAuthUI();
     setupEventListeners();
@@ -271,8 +284,9 @@ function main() {
         } else {
             state.currentUser = null;
             if(state.unsubscribe) state.unsubscribe();
+            appWrapper.style.display = 'none';
             showAuthUI();
-            hideLoading(false);
+            loadingOverlay.style.display = 'none';
         }
     });
 }

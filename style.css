@@ -1,11 +1,5 @@
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f1f5f9;
-    color: #1e293b;
-}
-html.dark body {
-    background-color: #0f172a;
-    color: #e2e8f0;
 }
 .kpi-card, .card {
     background-color: #fff;
@@ -99,4 +93,29 @@ html.dark .form-input {
     border-color: #818cf8;
     outline: none;
     box-shadow: 0 0 0 2px #818cf8, 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.nav-link {
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.2s;
+}
+html.dark .nav-link {
+    color: #94a3b8;
+}
+.nav-link:hover {
+    background-color: #f1f5f9;
+}
+html.dark .nav-link:hover {
+    background-color: #334155;
+}
+.nav-link.active {
+    background-color: #e0f2fe;
+    color: #0284c7;
+}   
+html.dark .nav-link.active {
+    background-color: #1e3a8a;
+    color: #bfdbfe;
 }

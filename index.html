@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Financeiro PRO com Login</title>
+    <title>Painel Financeiro PRO</title>
+    <!-- Ícone da Aba (Favicon) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +19,7 @@
         }
     </script>
 </head>
-<body>
+<body class="bg-slate-100 dark:bg-slate-900">
 
     <!-- Telas de Loading e Autenticação -->
     <div id="loadingOverlay">
@@ -27,8 +30,6 @@
     <div id="authOverlay" style="display: none;">
         <div class="auth-container">
             <h2 class="text-2xl font-bold text-center text-slate-900 dark:text-white mb-6">Acesse seu Painel</h2>
-            
-            <!-- Formulário de Email -->
             <div id="emailAuth" class="space-y-4">
                 <div>
                     <label for="email" class="block text-sm font-medium text-slate-600 dark:text-slate-300">Email</label>
@@ -47,70 +48,116 @@
         </div>
     </div>
 
-    <!-- Conteúdo Principal da Aplicação -->
-    <div id="appContent" class="container mx-auto p-4 md:p-8" style="display: none;">
-        <header class="relative text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Meu Painel de Controle Financeiro</h1>
-            <p class="mt-2 text-lg text-slate-600 dark:text-slate-400">Seus dados salvos na nuvem, acessíveis de qualquer lugar.</p>
-            <div class="absolute top-0 right-0 flex items-center gap-4">
-                <button id="themeToggleBtn" class="p-2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">🌙</button>
-                <button id="logoutBtn" class="text-sm font-semibold text-red-500 hover:text-red-700">Sair</button>
+    <!-- Estrutura Principal com Sidebar -->
+    <div id="appWrapper" class="flex h-screen" style="display: none;">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white dark:bg-slate-800 shadow-lg flex-shrink-0 p-4 flex flex-col">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-black text-slate-900 dark:text-white">Meu Planner</h1>
             </div>
-        </header>
+            <nav class="flex-grow">
+                <ul class="space-y-2">
+                    <li><a href="#dashboard" class="nav-link active">📊 Dashboard</a></li>
+                    <li><a href="#monthly-balance" class="nav-link">🗓️ Balanço Mensal</a></li>
+                    <li><a href="#goals" class="nav-link">🎯 Planos e Metas</a></li>
+                    <li><a href="#cards" class="nav-link">💳 Cartões</a></li>
+                    <li><a href="#subscriptions" class="nav-link">🔄 Assinaturas (Streams)</a></li>
+                </ul>
+            </nav>
+            <div class="mt-auto">
+                 <div class="flex items-center justify-between">
+                    <button id="themeToggleBtn" class="p-2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">🌙</button>
+                    <button id="logoutBtn" class="text-sm font-semibold text-red-500 hover:text-red-700">Sair</button>
+                </div>
+            </div>
+        </aside>
 
-        <section id="overview" class="mb-12">
-            <h2 class="text-2xl font-bold text-center mb-6">Visão Geral Rápida</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="kpi-card p-4"><div id="kpiSalario" class="kpi-value">R$ 0,00</div><div class="kpi-label">Renda Total Mensal</div></div>
-                <div class="kpi-card p-4"><div id="kpiGastos" class="kpi-value text-amber-500">R$ 0,00</div><div class="kpi-label">Gastos Totais Mensais</div></div>
-                <div class="kpi-card p-4"><div id="kpiSobra" class="kpi-value text-green-500">R$ 0,00</div><div class="kpi-label">Sobra / Poupança</div></div>
-                <div class="kpi-card p-4"><div id="kpiMetas" class="kpi-value text-blue-500">R$ 0,00</div><div class="kpi-label">Valor Total das Metas</div></div>
-            </div>
-        </section>
+        <!-- Conteúdo Principal -->
+        <main id="mainContent" class="flex-1 p-4 md:p-8 overflow-y-auto">
+            
+            <!-- SEÇÃO DASHBOARD -->
+            <section id="dashboard" class="page-content">
+                <header class="text-center mb-10">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Dashboard Financeiro</h1>
+                </header>
+                <section id="overview" class="mb-12">
+                    <h2 class="text-2xl font-bold text-center mb-6">Visão Geral Rápida</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="kpi-card p-4"><div id="kpiSalario" class="kpi-value">R$ 0,00</div><div class="kpi-label">Renda Total Mensal</div></div>
+                        <div class="kpi-card p-4"><div id="kpiGastos" class="kpi-value text-amber-500">R$ 0,00</div><div class="kpi-label">Gastos Totais Mensais</div></div>
+                        <div class="kpi-card p-4"><div id="kpiSobra" class="kpi-value text-green-500">R$ 0,00</div><div class="kpi-label">Sobra / Poupança</div></div>
+                        <div class="kpi-card p-4"><div id="kpiMetas" class="kpi-value text-blue-500">R$ 0,00</div><div class="kpi-label">Valor Total das Metas</div></div>
+                    </div>
+                </section>
+                <section id="gemini-analysis" class="card p-6 mb-8 text-center">
+                    <h3 class="text-xl font-bold mb-2">✨ Análise e Dicas com IA ✨</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">Peça ao Gemini para analisar seus dados e gerar conselhos personalizados!</p>
+                    <button id="generateAnalysisBtn" class="action-btn">Gerar Análise Financeira</button>
+                    <div id="analysisResult" class="mt-6 text-left p-4 bg-slate-100 dark:bg-slate-700 rounded-lg min-h-[100px] flex items-center justify-center">
+                         <p class="text-slate-500 dark:text-slate-400">Sua análise aparecerá aqui...</p>
+                    </div>
+                </section>
+            </section>
 
-        <section id="edit-data" class="card p-6 mb-8">
-            <h3 class="text-xl font-bold mb-6 text-center">✏️ Editar Meus Dados</h3>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Rendas -->
-                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Rendas</h4><div id="incomesList" class="space-y-3"></div><button type="button" data-type="incomes" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Renda</button></div>
-                <!-- Despesas -->
-                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Despesas Fixas</h4><div id="expensesList" class="space-y-3"></div><button type="button" data-type="expenses" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Despesa</button></div>
-                <!-- Metas -->
-                <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2 border-slate-200 dark:border-slate-700">Cofres (Metas)</h4><div id="goalsList" class="space-y-3"></div><button type="button" data-type="goals" class="addItemBtn w-full text-sm text-indigo-500 font-semibold py-2 border-2 border-dashed rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">+ Adicionar Meta</button></div>
-            </div>
-             <div class="text-center mt-8">
-                <button type="button" id="saveChangesBtn" class="action-btn px-8">Salvar Alterações na Nuvem</button>
-                <p id="saveMessage" class="text-green-500 mt-2 h-6"></p>
-            </div>
-        </section>
-        
-        <section id="gemini-analysis" class="card p-6 mb-8 text-center">
-            <h3 class="text-xl font-bold mb-2">✨ Análise e Dicas com IA ✨</h3>
-            <p class="text-slate-600 dark:text-slate-400 mb-4">Peça ao Gemini para analisar seus dados e gerar conselhos personalizados!</p>
-            <button id="generateAnalysisBtn" class="action-btn">Gerar Análise Financeira</button>
-            <div id="analysisResult" class="mt-6 text-left p-4 bg-slate-100 dark:bg-slate-700 rounded-lg min-h-[100px] flex items-center justify-center">
-                 <p class="text-slate-500 dark:text-slate-400">Sua análise aparecerá aqui...</p>
-            </div>
-        </section>
+            <!-- SEÇÃO BALANÇO MENSAL -->
+            <section id="monthly-balance" class="page-content" style="display: none;">
+                <header class="text-center mb-10">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Balanço Mensal</h1>
+                </header>
+                <section class="card p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">📊 Orçamento Detalhado</h3>
+                    <div class="chart-container h-80 md:h-96 mx-auto">
+                        <canvas id="budgetChart"></canvas>
+                    </div>
+                </section>
+            </section>
+            
+            <!-- SEÇÃO PLANOS E METAS -->
+            <section id="goals" class="page-content" style="display: none;">
+                 <header class="text-center mb-10">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Planos e Metas</h1>
+                </header>
+                <section id="edit-data" class="card p-6 mb-8">
+                    <h3 class="text-xl font-bold mb-6 text-center">✏️ Editar Meus Dados</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2">Rendas</h4><div id="incomesList"></div><button data-type="incomes" class="addItemBtn">+ Adicionar Renda</button></div>
+                        <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2">Despesas Fixas</h4><div id="expensesList"></div><button data-type="expenses" class="addItemBtn">+ Adicionar Despesa</button></div>
+                        <div class="space-y-4"><h4 class="font-bold text-lg border-b pb-2">Cofres (Metas)</h4><div id="goalsList"></div><button data-type="goals" class="addItemBtn">+ Adicionar Meta</button></div>
+                    </div>
+                     <div class="text-center mt-8">
+                        <button id="saveChangesBtn" class="action-btn px-8">Salvar Alterações</button>
+                        <p id="saveMessage" class="h-6 mt-2"></p>
+                    </div>
+                </section>
+                 <section id="goals-dashboard" class="card p-6 mb-8">
+                    <h3 class="text-xl font-bold mb-4 text-center">🎯 Meus Cofres de Sonhos</h3>
+                    <div id="goalsChartContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+                </section>
+            </section>
 
-        <main id="main-dashboard">
-             <section id="goals-dashboard" class="card p-6 mb-8">
-                <h3 class="text-xl font-bold mb-4 text-center">🎯 Meus Cofres de Sonhos</h3>
-                <div id="goalsChartContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-center">
-                    <!-- Gráficos das metas serão inseridos aqui -->
+             <!-- SEÇÃO CARTÕES -->
+            <section id="cards" class="page-content" style="display: none;">
+                <header class="text-center mb-10">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Meus Cartões</h1>
+                </header>
+                <div class="card p-6 text-center">
+                    <h2 class="text-2xl font-bold">Em Breve</h2>
+                    <p class="text-slate-500 mt-2">A funcionalidade de gerenciamento de cartões de crédito será adicionada aqui.</p>
                 </div>
             </section>
-            <section id="budget-dashboard" class="card p-6">
-                <h3 class="text-xl font-bold mb-4 text-center">📊 Orçamento Mensal Simplificado</h3>
-                <div class="chart-container h-80 md:h-96 mx-auto">
-                    <canvas id="budgetChart"></canvas>
+
+            <!-- SEÇÃO ASSINATURAS -->
+            <section id="subscriptions" class="page-content" style="display: none;">
+                <header class="text-center mb-10">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">Minhas Assinaturas</h1>
+                </header>
+                 <div class="card p-6 text-center">
+                    <h2 class="text-2xl font-bold">Em Breve</h2>
+                    <p class="text-slate-500 mt-2">A funcionalidade para controlar gastos com streams e outras assinaturas será adicionada aqui.</p>
                 </div>
             </section>
+
         </main>
-        
-        <footer class="text-center mt-12 py-4 border-t border-slate-200 dark:border-slate-700">
-            <p class="text-slate-500 dark:text-slate-400">Painel Financeiro PRO</p>
-        </footer>
     </div>
 
     <script src="script.js" type="module"></script>
