@@ -42,22 +42,15 @@ function setupNavigation() {
             e.preventDefault();
             const targetId = link.getAttribute('href').substring(1);
 
-            // Esconde todas as páginas
             pageContents.forEach(page => page.style.display = 'none');
-            
-            // Mostra a página alvo
             document.getElementById(targetId).style.display = 'block';
 
-            // Atualiza a classe 'active'
             navLinks.forEach(nav => nav.classList.remove('active'));
             link.classList.add('active');
         });
     });
-
-    // Mostra a primeira página por padrão
     document.querySelector('#dashboard').style.display = 'block';
 }
-
 
 // --- LÓGICA DE AUTENTICAÇÃO ---
 function setupAuthUI() {
@@ -67,7 +60,7 @@ function setupAuthUI() {
         authError.textContent = '';
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error) { authError.textContent = "Erro ao registrar: " + error.message; }
+        } catch (error) { authError.textContent = "Erro ao registar: " + error.message; }
     });
 
     document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -89,38 +82,55 @@ async function setupFirestoreListener(user) {
 
     state.unsubscribe = onSnapshot(financialDataRef, (docSnap) => {
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            state.financialData = data;
-            renderUI(data);
+            state.financialData = docSnap.data();
+            renderUI(state.financialData);
         } else {
             createInitialDocument(financialDataRef);
         }
         hideLoading();
-    }, (error) => {
-        console.error("Erro ao carregar dados:", error);
-    });
+    }, (error) => console.error("Erro ao carregar dados:", error));
 }
 
 async function createInitialDocument(docRef) {
     const initialData = {
         theme: 'light',
         incomes: [{ id: Date.now(), name: 'Salário', value: 2500 }],
-        expenses: [{ id: Date.now(), name: 'Aluguel', value: 800 }],
-        goals: [{ id: Date.now(), name: 'Viagem', target: 3000, current: 200 }],
+        expenses: [{ id: Date.now() + 1, name: 'Aluguel', value: 800 }],
+        goals: [{ id: Date.now() + 2, name: 'Viagem', target: 3000, current: 200 }],
+        cards: [{ id: Date.now() + 3, name: 'Meu Cartão', limit: 1500, current: 500 }],
+        subscriptions: [{ id: Date.now() + 4, name: 'Netflix', value: 39.90 }],
     };
     await setDoc(docRef, initialData);
 }
 
 async function saveDataToFirestore() {
     document.getElementById('saveChangesBtn').disabled = true;
+    
     const dataToSave = {
         theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
-        incomes: [], expenses: [], goals: []
+        incomes: [], expenses: [], goals: [], cards: [], subscriptions: []
+    };
+    
+    // Mapeia os tipos de dados para as suas respetivas listas e campos
+    const dataMap = {
+        incomes: { listId: 'incomesList', fields: ['name', 'value'] },
+        expenses: { listId: 'expensesList', fields: ['name', 'value'] },
+        goals: { listId: 'goalsList', fields: ['name', 'current', 'target'] },
+        cards: { listId: 'cardsList', fields: ['name', 'current', 'limit'] },
+        subscriptions: { listId: 'subscriptionsList', fields: ['name', 'value'] }
     };
 
-    document.querySelectorAll('#incomesList .item-entry').forEach(entry => dataToSave.incomes.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, value: parseFloat(entry.querySelector('.item-value').value) || 0 }));
-    document.querySelectorAll('#expensesList .item-entry').forEach(entry => dataToSave.expenses.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, value: parseFloat(entry.querySelector('.item-value').value) || 0 }));
-    document.querySelectorAll('#goalsList .item-entry').forEach(entry => dataToSave.goals.push({ id: entry.dataset.id, name: entry.querySelector('.item-name').value, target: parseFloat(entry.querySelector('.item-target').value) || 0, current: parseFloat(entry.querySelector('.item-current').value) || 0 }));
+    for (const type in dataMap) {
+        const { listId, fields } = dataMap[type];
+        document.querySelectorAll(`#${listId} .item-entry`).forEach(entry => {
+            const itemData = { id: entry.dataset.id };
+            fields.forEach(field => {
+                const input = entry.querySelector(`.item-${field}`);
+                itemData[field] = (input.type === 'number') ? parseFloat(input.value) || 0 : input.value;
+            });
+            dataToSave[type].push(itemData);
+        });
+    }
     
     const financialDataRef = doc(db, `financial_planners/${state.currentUser.uid}/data`, 'main');
     try {
@@ -156,7 +166,7 @@ function applyTheme(theme) {
 }
 
 function renderDynamicLists(data) {
-    const lists = { incomes: 'incomesList', expenses: 'expensesList', goals: 'goalsList' };
+    const lists = { incomes: 'incomesList', expenses: 'expensesList', goals: 'goalsList', cards: 'cardsList', subscriptions: 'subscriptionsList' };
     for(const key in lists) {
         const container = document.getElementById(lists[key]);
         container.innerHTML = '';
@@ -181,7 +191,6 @@ function renderKPIs({ incomeTotal, expenseTotal, surplus, goalsTotal }) {
     document.getElementById('kpiMetas').textContent = formatCurrency(goalsTotal);
 }
 
-// --- LÓGICA DOS GRÁFICOS ---
 function initializeCharts() {
     const budgetCanvas = document.getElementById('budgetChart');
     if(budgetCanvas && !state.charts.budget) {
@@ -202,7 +211,7 @@ function renderCharts({ incomeTotal, expenseTotal, surplus, allData }) {
     goalsContainer.innerHTML = '';
     allData.goals?.forEach(goal => {
         const chartDiv = document.createElement('div');
-        chartDiv.innerHTML = `<div class="h-64"><canvas id="goal-chart-${goal.id}"></canvas></div><p class="mt-2 font-semibold">${goal.name}</p>`;
+        chartDiv.innerHTML = `<div class="h-48"><canvas id="goal-chart-${goal.id}"></canvas></div><p class="mt-2 text-sm font-semibold">${goal.name}</p>`;
         goalsContainer.appendChild(chartDiv);
         new Chart(document.getElementById(`goal-chart-${goal.id}`), {
             type: 'doughnut',
@@ -212,35 +221,32 @@ function renderCharts({ incomeTotal, expenseTotal, surplus, allData }) {
     });
 }
 
-// --- MANIPULAÇÃO DINÂMICA DO DOM ---
 function addEntryToDOM(type, item = {}) {
     const id = item.id || Date.now();
-    const name = item.name || '';
-    const value = item.value || '';
-    const target = item.target || '';
-    const current = item.current || '';
-
+    
     const container = document.getElementById(`${type}List`);
     const entryDiv = document.createElement('div');
-    entryDiv.className = 'item-entry flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-md';
+    entryDiv.className = 'item-entry';
     entryDiv.dataset.id = id;
 
-    let fields = `<div class="flex-grow"><input type="text" value="${name}" placeholder="Nome" class="item-name w-full p-1 form-input"></div>`;
-    if(type === 'goals') {
-        fields += `<div class="flex-grow"><input type="number" value="${current}" placeholder="Atual" class="item-current w-full p-1 form-input"></div>`;
+    let fields = `<div class="flex-grow"><input type="text" value="${item.name || ''}" placeholder="Nome" class="item-name w-full p-1 form-input"></div>`;
+
+    if(type === 'goals' || type === 'cards') {
+        const currentPlaceholder = (type === 'goals') ? 'Atual' : 'Fatura';
+        const targetPlaceholder = (type === 'goals') ? 'Meta' : 'Limite';
+        fields += `<div class="flex-grow"><input type="number" value="${item.current || ''}" placeholder="${currentPlaceholder}" class="item-current w-full p-1 form-input"></div>`;
         fields += `<span>/</span>`;
-        fields += `<div class="flex-grow"><input type="number" value="${target}" placeholder="Meta" class="item-target w-full p-1 form-input"></div>`;
-    } else {
-        fields += `<div class="flex-grow"><input type="number" value="${value}" placeholder="Valor" class="item-value w-full p-1 form-input"></div>`;
+        fields += `<div class="flex-grow"><input type="number" value="${item.target || item.limit || ''}" placeholder="${targetPlaceholder}" class="item-${(type === 'goals') ? 'target' : 'limit'} w-full p-1 form-input"></div>`;
+    } else { // incomes, expenses, subscriptions
+        fields += `<div class="flex-grow"><input type="number" value="${item.value || ''}" placeholder="Valor" class="item-value w-full p-1 form-input"></div>`;
     }
     
-    entryDiv.innerHTML = `${fields}<button class="removeItemBtn text-red-500">&times;</button>`;
+    entryDiv.innerHTML = `${fields}<button class="removeItemBtn">&times;</button>`;
     container.appendChild(entryDiv);
 }
 
-// --- EVENT LISTENERS ---
 function setupEventListeners() {
-    document.getElementById('edit-data').addEventListener('click', (e) => {
+    document.body.addEventListener('click', (e) => {
         if (e.target.classList.contains('addItemBtn')) {
             addEntryToDOM(e.target.dataset.type);
         }
@@ -250,11 +256,7 @@ function setupEventListeners() {
     });
     
     document.getElementById('saveChangesBtn').addEventListener('click', saveDataToFirestore);
-    
-    themeToggleBtn.addEventListener('click', () => {
-        const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-        applyTheme(newTheme);
-    });
+    themeToggleBtn.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
 }
 
 // --- Funções de UI e Utilidades ---
