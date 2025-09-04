@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- Configuração do Firebase (Coloque suas chaves aqui) ---
+// --- Configuração do Firebase ---
 const firebaseConfig = {
     apiKey: "AIzaSyDmgBe4wqDaamTRRlolUSBCR1Hp9wYScoU",
     authDomain: "financeiro-7c28e.firebaseapp.com",
@@ -30,32 +30,10 @@ let state = {
     financialData: {},
     charts: {},
     unsubscribe: null,
-    confirmationResult: null,
 };
 
 // --- LÓGICA DE AUTENTICAÇÃO ---
 function setupAuthUI() {
-    // Lógica das abas
-    const emailTabBtn = document.getElementById('emailTabBtn');
-    const phoneTabBtn = document.getElementById('phoneTabBtn');
-    const emailAuthDiv = document.getElementById('emailAuth');
-    const phoneAuthDiv = document.getElementById('phoneAuth');
-
-    emailTabBtn.addEventListener('click', () => {
-        emailAuthDiv.style.display = 'block';
-        phoneAuthDiv.style.display = 'none';
-        emailTabBtn.classList.add('border-blue-500', 'text-blue-500');
-        phoneTabBtn.classList.remove('border-blue-500', 'text-blue-500');
-    });
-
-    phoneTabBtn.addEventListener('click', () => {
-        emailAuthDiv.style.display = 'none';
-        phoneAuthDiv.style.display = 'block';
-        phoneTabBtn.classList.add('border-blue-500', 'text-blue-500');
-        emailTabBtn.classList.remove('border-blue-500', 'text-blue-500');
-        if (!window.recaptchaVerifier) setupRecaptcha();
-    });
-
     // Listeners de Email/Senha
     document.getElementById('registerBtn').addEventListener('click', async () => {
         const email = document.getElementById('email').value;
@@ -75,37 +53,8 @@ function setupAuthUI() {
         } catch (error) { authError.textContent = "Erro ao entrar: " + error.message; }
     });
     
-    // Listeners de Telefone
-    document.getElementById('sendCodeBtn').addEventListener('click', async () => {
-        const phoneNumber = document.getElementById('phoneNumber').value;
-        authError.textContent = '';
-        try {
-            state.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-            document.getElementById('verifyCodeSection').style.display = 'block';
-            authError.textContent = 'Código de verificação enviado!';
-            authError.classList.replace('text-red-500', 'text-green-500');
-        } catch (error) { authError.textContent = "Erro ao enviar código: " + error.message; }
-    });
-
-    document.getElementById('verifyCodeBtn').addEventListener('click', async () => {
-        const code = document.getElementById('verificationCode').value;
-        authError.textContent = '';
-        try {
-            await state.confirmationResult.confirm(code);
-        } catch (error) { authError.textContent = "Código inválido: " + error.message; }
-    });
-    
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
-}
-
-function setupRecaptcha() {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'normal',
-        'callback': (response) => { /* reCAPTCHA resolvido */ },
-        'expired-callback': () => { /* reCAPTCHA expirado */ }
-    });
-    window.recaptchaVerifier.render();
 }
 
 // --- LÓGICA DE DADOS (FIRESTORE) ---
@@ -323,7 +272,7 @@ function main() {
             state.currentUser = null;
             if(state.unsubscribe) state.unsubscribe();
             showAuthUI();
-            hideLoading(false); // A grande mudança está aqui
+            hideLoading(false);
         }
     });
 }
